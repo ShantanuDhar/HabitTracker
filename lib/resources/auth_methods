@@ -1,0 +1,87 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:habit_tracker/Helper/helper_function.dart';
+
+class AuthMethods {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Sign Up User
+  Future<String> signUpUser({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    try {
+      // Create user with email and password
+      UserCredential cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Add user information to Firestore
+      await _firestore.collection('users').doc(cred.user!.uid).set({
+        'uid': cred.user!.uid,
+        'email': email,
+        'username': username,
+      });
+
+      // Set helper functions
+      await HelperFunction.setUserLoggedInStatus(true);
+      await HelperFunction.setUserNameSF(username);
+      await HelperFunction.setUserEmailSF(email);
+
+      return 'success';
+    } on FirebaseAuthException catch (e) {
+      return e.message!;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  // Login User
+  Future<String> loginUser({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Sign in with email and password
+      await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Get user information from Firestore
+      DocumentSnapshot userDoc = await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
+
+      String username = userDoc['username'];
+
+      // Set helper functions
+      await HelperFunction.setUserLoggedInStatus(true);
+      await HelperFunction.setUserNameSF(username);
+      await HelperFunction.setUserEmailSF(email);
+
+      return 'success';
+    } on FirebaseAuthException catch (e) {
+      return e.message!;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+    Future signout() async{
+try{
+await HelperFunction.setUserLoggedInStatus(false);
+await HelperFunction.setUserEmailSF("");
+await HelperFunction.setUserNameSF("");
+await _auth.signOut();
+
+} catch(e){
+  return null;
+}
+}
+
+
+}
